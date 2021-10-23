@@ -1,0 +1,13 @@
+.idea/
+target/
+project/project/
+
+metals.sbt
+/.metals
+.bloop/
+/.bsp
+/.envrc
+yarn.lock
+.DS_Store
+
+node_modules
