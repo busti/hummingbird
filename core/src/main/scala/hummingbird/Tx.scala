@@ -71,7 +71,7 @@ trait TxBase[A] {
   def withLatest[B](latest: H[B]): H[(A, B)]
   def withLatestMap[B, R](latest: H[B])(fn: (A, B) => R): H[R]
   def zip[B](other: H[B]): H[(A, B)]
-  def zipWithIndex: H[(A, Int)]
+  def zipWithIndex: H[(A, Long)]
 }
 
 trait Tx[A] extends TxBase[A] {
