@@ -32,7 +32,7 @@ class MonixRxBuilder(implicit scheduler: Scheduler) extends RxBuilder { self =>
 
   def empty[A]: MonixRx[A] = new MonixRx(Observer.empty)
 
-  def forEach[A](fn: A => Unit): I[A] = new MonixRx(SafeSubscriber(new Subscriber[A] {
+  def foreach[A](fn: A => Unit): I[A] = new MonixRx(SafeSubscriber(new Subscriber[A] {
     def scheduler: Scheduler = self.scheduler
     override def onNext(elem: A): Future[Ack] = { fn(elem); Ack.Continue }
     override def onError(ex: Throwable): Unit = UncaughtExceptionReporter.default.reportFailure(ex)

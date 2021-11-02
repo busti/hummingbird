@@ -25,5 +25,5 @@ trait RxBuilder { self =>
 
   def empty[A]: I[A]
 
-  def forEach[A](consume: A => Unit): I[A]
+  def foreach[A](consume: A => Unit): I[A]
 }
