@@ -22,6 +22,10 @@ trait Tx[+A] { self =>
 
   def filter(p: A => Boolean): J[A]
 
+  def withLatest[B](other: J[B]): J[(A, B)]
+
+  def withLatestMap[B, C](other: J[B])(fn: (A, B) => C): J[C]
+
 }
 
 trait TxBuilder { self =>
@@ -31,4 +35,9 @@ trait TxBuilder { self =>
   type J[+T] <: Tx[T] { type H[+X] <: self.H[X] }
 
   def empty[A]: J[A]
+
+  def withLatest[A, B](a: J[A], b: J[B]): J[(A, B)]
+
+  def withLatestMap[A, B, C](a: J[A], b: J[B])(fn: (A, B) => C): J[C]
+
 }
