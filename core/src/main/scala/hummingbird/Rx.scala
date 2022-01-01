@@ -7,8 +7,10 @@ trait Rx[-A] { self =>
   type G[-_]
   type StreamT[GG[_]] = TransformK[GG, G]
 
-  type I[-T] <: Rx[T]
-  type J[+T] <: Tx[T] { type J[+X] <: self.J[X] }
+  //noinspection DuplicatedCode
+  type I[-T] <: Rx[T] { type I[-X] = self.I[X]; type J[+X] = self.J[X] }
+  //noinspection DuplicatedCode
+  type J[+T] <: Tx[T] { type I[-X] = self.I[X]; type J[+X] = self.J[X] }
 
   private[hummingbird] val stream: G[A]
 
@@ -21,7 +23,7 @@ trait RxBuilder { self =>
   type G[-_]
   type StreamT[GG[_]] = TransformK[GG, G]
 
-  type I[-T] <: Rx[T] { type G[-X] <: self.G[X] }
+  type I[-T] <: Rx[T] { type G[-X] <: self.G[X]; type I[-X] = self.I[X] }
 
   def empty[A]: I[A]
 

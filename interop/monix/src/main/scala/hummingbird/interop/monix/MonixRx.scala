@@ -14,7 +14,7 @@ class MonixRx[-A](val stream: Observer[A])(implicit scheduler: Scheduler) extend
   type F[+T] = Task[T]
   type G[-T] = Observer[T]
   type I[-T] = MonixRx[T]
-  type J[+T] = MonixTx[T] { type J[+X] = MonixTx[X] }
+  type J[+T] = MonixTx[T]
 
   def contraMap[B](fn: B => A): I[B] = new MonixRx(stream.contramap(fn))
 

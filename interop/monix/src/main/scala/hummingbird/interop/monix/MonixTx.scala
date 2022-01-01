@@ -7,7 +7,7 @@ import monix.reactive._
 class MonixTx[+A](val stream: Observable[A]) extends Tx[A] {
   type F[+T] = Task[T]
   type H[+T] = Observable[T]
-  type I[-T] = MonixRx[T] { type I[-X] = MonixRx[X] }
+  type I[-T] = MonixRx[T]
   type J[+T] = MonixTx[T]
 
   def map[B](f: A => B): J[B] = new MonixTx(stream.map(f))
