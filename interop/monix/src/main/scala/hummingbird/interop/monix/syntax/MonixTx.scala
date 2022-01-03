@@ -1,7 +1,7 @@
-package hummingbird.interop.monix
+package hummingbird.interop.monix.syntax
 
 import cats.effect.Effect
-import hummingbird._
+import hummingbird.syntax.{Tx, TxBuilder}
 import monix.eval._
 import monix.reactive._
 

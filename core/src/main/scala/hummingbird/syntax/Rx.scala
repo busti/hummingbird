@@ -1,4 +1,6 @@
-package hummingbird
+package hummingbird.syntax
+
+import hummingbird.TransformK
 
 trait Rx[-A] { self =>
   type F[+_]
@@ -16,7 +18,7 @@ trait Rx[-A] { self =>
 
   def contraMap[B](fn: B => A): I[B]
 
-  def redirect[B](transform: J[B] => J[A]): I[B]
+  def redirect[B](transform: J[_ <: B] => J[A]): I[B]
 }
 
 trait RxBuilder { self =>

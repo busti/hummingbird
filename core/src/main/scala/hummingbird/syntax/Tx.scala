@@ -1,6 +1,7 @@
-package hummingbird
+package hummingbird.syntax
 
 import cats.effect.Effect
+import hummingbird._
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
@@ -18,6 +19,8 @@ trait Tx[+A] { self =>
   type J[+T] <: Tx[T] { type I[-X] = self.I[X]; type J[+X] = self.J[X] }
 
   private[hummingbird] val stream: H[A]
+
+  def subscribe[R : CanCancel](subscriber: Rx[A]): R
 
   def map[B](fn: A => B): J[B]
 
@@ -50,6 +53,8 @@ trait Tx[+A] { self =>
   def concatMapFuture[B](fn: A => Future[B]): J[B]
 
   def concatMapAsync[FF[_] : Effect, B](fn: A => FF[B]): J[B]
+
+  def redirect[B](transform: I[_ >: B] => I[A]): J[B]
 }
 
 trait TxBuilder { self =>
@@ -63,5 +68,4 @@ trait TxBuilder { self =>
   def withLatest[A, B](a: J[A], b: J[B]): J[(A, B)]
 
   def withLatestMap[A, B, C](a: J[A], b: J[B])(fn: (A, B) => C): J[C]
-
 }

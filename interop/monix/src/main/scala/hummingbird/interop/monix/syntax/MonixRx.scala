@@ -1,6 +1,6 @@
-package hummingbird.interop.monix
+package hummingbird.interop.monix.syntax
 
-import hummingbird._
+import hummingbird.syntax.{Rx, RxBuilder}
 import monix.eval.Task
 import monix.execution.{Ack, Scheduler, UncaughtExceptionReporter}
 import monix.reactive.Observer
@@ -8,7 +8,6 @@ import monix.reactive.observers.{SafeSubscriber, Subscriber}
 import monix.reactive.subjects.PublishSubject
 
 import scala.concurrent.Future
-import scala.util.{Failure, Success, Try}
 
 class MonixRx[-A](val stream: Observer[A])(implicit scheduler: Scheduler) extends Rx[A] { self =>
   type F[+T] = Task[T]
