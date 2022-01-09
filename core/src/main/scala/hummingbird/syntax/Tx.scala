@@ -6,66 +6,40 @@ import hummingbird._
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
-trait Tx[+A] { self =>
-  type F[+_]
-  type EffectT[FF[_]] = TransformK[FF, F]
+trait Tx extends Context { self =>
+  def map[A, B](source: H[A])(f: A => B): H[B]
 
-  type H[+_]
-  type StreamT[HH[_]] = TransformK[HH, H]
+  def flatMap[A, B](source: H[A])(f: A => H[B]): H[B]
 
-  //noinspection DuplicatedCode
-  type I[-T] <: Rx[T] { type I[-X] = self.I[X]; type J[+X] = self.J[X] }
-  //noinspection DuplicatedCode
-  type J[+T] <: Tx[T] { type I[-X] = self.I[X]; type J[+X] = self.J[X] }
+  def evalMap[A, B](source: H[A])(f: A => F[B]): H[B]
 
-  private[hummingbird] val stream: H[A]
+  def collect[A, B](source: H[A])(pf: PartialFunction[A, B]): H[B]
 
-  def subscribe[R : CanCancel](subscriber: Rx[A]): R
+  def filter[A](source: H[A])(p: A => Boolean): H[A]
 
-  def map[B](fn: A => B): J[B]
+  def withLatest[A, B](source: H[A])(other: H[B]): H[(A, B)]
 
-  def flatMap[B](fn: A => J[B]): J[B]
+  def withLatestMap[A, B, C](source: H[A])(other: H[B])(f: (A, B) => C): H[C]
 
-  def evalMap[B](fn: A => F[B]): J[B]
+  def scan[A, B](source: H[A])(z: B)(op: (B, A) => B): H[B]
 
-  def collect[B](pf: PartialFunction[A, B]): J[B]
+  def scan0[A, B](source: H[A])(z: B)(op: (B, A) => B): H[B]
 
-  def filter(p: A => Boolean): J[A]
+  def debounce[A](source: H[A])(d: FiniteDuration): H[A]
 
-  def withLatest[B](other: J[B]): J[(A, B)]
+  def debounceMillis[A](source: H[A])(millis: Long): H[A]
 
-  def withLatestMap[B, C](other: J[B])(fn: (A, B) => C): J[C]
+  def async[A](source: H[A]): H[A]
 
-  def scan[B](z: B)(op: (B, A) => B): J[B]
+  def delay[A](source: H[A])(duration: FiniteDuration): H[A]
 
-  def scan0[B](z: B)(op: (B, A) => B): J[B]
+  def delayMillis[A](source: H[A])(millis: Long): H[A]
 
-  def debounce(d: FiniteDuration): J[A]
+  def concatMapFuture[A, B](source: H[A])(f: A => Future[B]): H[B]
 
-  def debounceMillis(millis: Long): J[A]
+  def concatMapAsync[A, FF[_] : Effect, B](source: H[A])(f: A => FF[B]): H[B]
 
-  def async: J[A]
+  def redirect[A, B](source: H[A])(transform: G[B] => G[A]): H[B]
 
-  def delay(duration: FiniteDuration): J[A]
-
-  def delayMillis(millis: Long): J[A]
-
-  def concatMapFuture[B](fn: A => Future[B]): J[B]
-
-  def concatMapAsync[FF[_] : Effect, B](fn: A => FF[B]): J[B]
-
-  def redirect[B](transform: I[_ >: B] => I[A]): J[B]
-}
-
-trait TxBuilder { self =>
-  type H[+_]
-  type StreamT[HH[_]] = TransformK[HH, H]
-
-  type J[+T] <: Tx[T] { type H[+X] <: self.H[X]; type J[+X] = self.J[X] }
-
-  def empty[A]: J[A]
-
-  def withLatest[A, B](a: J[A], b: J[B]): J[(A, B)]
-
-  def withLatestMap[A, B, C](a: J[A], b: J[B])(fn: (A, B) => C): J[C]
+  def subscribe[A](source: H[A])(subscriber: G[A]): Cancelable
 }

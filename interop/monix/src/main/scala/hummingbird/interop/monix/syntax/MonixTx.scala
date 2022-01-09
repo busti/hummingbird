@@ -1,7 +1,7 @@
 package hummingbird.interop.monix.syntax
 
 import cats.effect.Effect
-import hummingbird.syntax.{Tx, TxBuilder}
+import hummingbird.syntax.{Rx, Tx, TxBuilder}
 import monix.eval._
 import monix.reactive._
 
@@ -14,11 +14,14 @@ class MonixTx[+A](val stream: Observable[A]) extends Tx[A] {
   type I[-T] = MonixRx[T]
   type J[+T] = MonixTx[T]
 
+  def subscribe(tx: I[A]) =
+    stream.subscribe(tx.stream)
+
   def map[B](f: A => B): J[B] = new MonixTx(stream.map(f))
 
   def flatMap[B](f: A => MonixTx[B]): MonixTx[B] = new MonixTx(stream.flatMap(a => f(a).stream))
 
-  def evalMap[B](fn: A => Task[B]): MonixTx[B] = new MonixTx(stream.mapEval(fn))
+  def evalMap[B](f: A => Task[B]): MonixTx[B] = new MonixTx(stream.mapEval(f))
 
   def collect[B](pf: PartialFunction[A, B]): MonixTx[B] = new MonixTx(stream.collect(pf))
 
@@ -26,8 +29,8 @@ class MonixTx[+A](val stream: Observable[A]) extends Tx[A] {
 
   def withLatest[B](other: MonixTx[B]): MonixTx[(A, B)] = new MonixTx(stream.withLatestFrom(other.stream)(Tuple2.apply))
 
-  def withLatestMap[B, C](other: MonixTx[B])(fn: (A, B) => C): MonixTx[C] =
-    new MonixTx(stream.withLatestFrom(other.stream)(fn))
+  def withLatestMap[B, C](other: MonixTx[B])(f: (A, B) => C): MonixTx[C] =
+    new MonixTx(stream.withLatestFrom(other.stream)(f))
 
   def scan[B](z: B)(op: (B, A) => B): MonixTx[B] = new MonixTx(stream.scan(z)(op))
 
@@ -43,9 +46,9 @@ class MonixTx[+A](val stream: Observable[A]) extends Tx[A] {
 
   def delayMillis(millis: Long): MonixTx[A] = new MonixTx(stream.delayExecution(FiniteDuration.apply(millis, "millis")))
 
-  def concatMapFuture[B](fn: A => Future[B]): MonixTx[B] = ??? // new MonixTx(stream.concatMap(Observable.fromFuture(() => fn())))
+  def concatMapFuture[B](f: A => Future[B]): MonixTx[B] = ??? // new MonixTx(stream.concatMap(Observable.fromFuture(() => f())))
 
-  def concatMapAsync[FF[_] : Effect, B](fn: A => FF[B]): MonixTx[B] = ??? // new MonixTx(stream.concatMap(Observable.fromFuture(() => fn())))
+  def concatMapAsync[FF[_] : Effect, B](f: A => FF[B]): MonixTx[B] = ??? // new MonixTx(stream.concatMap(Observable.fromFuture(() => f())))
 }
 
 class MonixTxBuilder extends TxBuilder {
@@ -57,6 +60,6 @@ class MonixTxBuilder extends TxBuilder {
   def withLatest[A, B](a: MonixTx[A], b: MonixTx[B]): MonixTx[(A, B)] =
     new MonixTx(a.stream.withLatestFrom(b.stream)(Tuple2.apply))
 
-  def withLatestMap[A, B, C](a: MonixTx[A], b: MonixTx[B])(fn: (A, B) => C): MonixTx[C] =
-    new MonixTx(a.stream.withLatestFrom(b.stream)(fn))
+  def withLatestMap[A, B, C](a: MonixTx[A], b: MonixTx[B])(f: (A, B) => C): MonixTx[C] =
+    new MonixTx(a.stream.withLatestFrom(b.stream)(f))
 }

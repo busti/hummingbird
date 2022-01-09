@@ -30,6 +30,17 @@ lazy val interop_monix = project.in(file("interop/monix"))
   )
   .dependsOn(core)
 
+lazy val interop_zio = project.in(file("interop/zio"))
+  .settings(commonSettings)
+  .settings(
+    name := s"$projectName-interop_zio",
+    libraryDependencies ++= Seq(
+      "dev.zio" %% "zio" % "2.0.0-RC1",
+      "dev.zio" %% "zio-streams" % "2.0.0-RC1",
+    )
+  )
+  .dependsOn(core)
+
 lazy val root = project.in(file("."))
   .settings(
     name := s"$projectName-root"

@@ -8,12 +8,12 @@ import cats.Functor
 // this subscription and decides when to subscribe and when to unsubscribe.
 
 trait SubscriptionOwner[T] {
-  def own[U : CanCancel](owner: T)(subscription: () => U): T
+  def own(owner: T)(subscription: () => Cancelable): T
 }
 object SubscriptionOwner {
   @inline def apply[T](implicit owner: SubscriptionOwner[T]): SubscriptionOwner[T] = owner
 
   implicit def functorOwner[F[_] : Functor, T : SubscriptionOwner]: SubscriptionOwner[F[T]] = new SubscriptionOwner[F[T]] {
-    def own[U : CanCancel](owner: F[T])(subscription: () => U): F[T] = Functor[F].map(owner)(owner => SubscriptionOwner[T].own(owner)(subscription))
+    def own(owner: F[T])(subscription: () => Cancelable): F[T] = Functor[F].map(owner)(owner => SubscriptionOwner[T].own(owner)(subscription))
   }
 }
