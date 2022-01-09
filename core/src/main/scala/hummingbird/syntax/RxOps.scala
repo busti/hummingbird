@@ -4,6 +4,8 @@ import hummingbird.Context
 
 class RxOps[GG[_], A](val sink: GG[A]) extends AnyVal with Context { self =>
   type G[-T] = GG[T]
+
+  //noinspection DuplicatedCode
   type RRx <: Rx {
     type Cancelable = self.Cancelable
     type F[+T] = self.F[T]

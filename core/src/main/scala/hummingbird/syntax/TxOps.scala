@@ -8,6 +8,8 @@ import scala.concurrent.duration.FiniteDuration
 
 class TxOps[HH[+_], A](val source: HH[A]) extends AnyVal with Context { self =>
   type H[+T] = HH[T]
+
+  //noinspection DuplicatedCode
   type TTx <: Tx {
     type Cancelable = self.Cancelable
     type F[+T] = self.F[T]
