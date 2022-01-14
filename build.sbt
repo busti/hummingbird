@@ -41,7 +41,18 @@ lazy val interop_zio = project.in(file("interop/zio"))
   )
   .dependsOn(core)
 
+lazy val interop_fs2 = project.in(file("interop/fs2"))
+  .settings(commonSettings)
+  .settings(
+    name := s"$projectName-interop_fs2",
+    libraryDependencies ++= Seq(
+      "co.fs2" %% "fs2-core" % "2.5.10",
+      "co.fs2" %% "fs2-io" % "2.5.10",
+    )
+  )
+  .dependsOn(core)
+
 lazy val root = project.in(file("."))
   .settings(
     name := s"$projectName-root"
-  ).aggregate(core, interop_monix)
+  ).aggregate(core, interop_monix, interop_zio, interop_fs2)

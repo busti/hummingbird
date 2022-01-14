@@ -1,65 +1,69 @@
 package hummingbird.interop.monix.syntax
 
 import cats.effect.Effect
-import hummingbird.syntax.{Rx, Tx, TxBuilder}
-import monix.eval._
-import monix.reactive._
+import hummingbird.interop.monix.MonixContext
+import hummingbird.syntax.Tx
+import monix.eval.Task
+import monix.execution.{Ack, Scheduler}
+import monix.reactive.{Observable, Observer, OverflowStrategy}
 
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
-class MonixTx[+A](val stream: Observable[A]) extends Tx[A] {
-  type F[+T] = Task[T]
-  type H[+T] = Observable[T]
-  type I[-T] = MonixRx[T]
-  type J[+T] = MonixTx[T]
+class MonixTx(implicit scheduler: Scheduler) extends Tx with MonixContext {
+  def map[A, B](source: Observable[A])(f: A => B): Observable[B] =
+    source.map(f)
 
-  def subscribe(tx: I[A]) =
-    stream.subscribe(tx.stream)
+  def flatMap[A, B](source: Observable[A])(f: A => Observable[B]): Observable[B] =
+    source.flatMap(f)
 
-  def map[B](f: A => B): J[B] = new MonixTx(stream.map(f))
+  def evalMap[A, B](source: Observable[A])(f: A => Task[B]): Observable[B] =
+    source.mapEval(f)
 
-  def flatMap[B](f: A => MonixTx[B]): MonixTx[B] = new MonixTx(stream.flatMap(a => f(a).stream))
+  def collect[A, B](source: Observable[A])(pf: PartialFunction[A, B]): Observable[B] =
+    source.collect(pf)
 
-  def evalMap[B](f: A => Task[B]): MonixTx[B] = new MonixTx(stream.mapEval(f))
+  def filter[A](source: Observable[A])(p: A => Boolean): Observable[A] =
+    source.filter(p)
 
-  def collect[B](pf: PartialFunction[A, B]): MonixTx[B] = new MonixTx(stream.collect(pf))
+  def withLatest[A, B](source: Observable[A])(other: Observable[B]): Observable[(A, B)] =
+    source.withLatestFrom(other)(Tuple2.apply)
 
-  def filter(p: A => Boolean): MonixTx[A] = new MonixTx(stream.filter(p))
+  def withLatestMap[A, B, C](source: Observable[A])(other: Observable[B])(f: (A, B) => C): Observable[C] =
+    source.withLatestFrom(other)(f)
 
-  def withLatest[B](other: MonixTx[B]): MonixTx[(A, B)] = new MonixTx(stream.withLatestFrom(other.stream)(Tuple2.apply))
+  def scan[A, B](source: Observable[A])(z: B)(op: (B, A) => B): Observable[B] =
+    source.scan(z)(op)
 
-  def withLatestMap[B, C](other: MonixTx[B])(f: (A, B) => C): MonixTx[C] =
-    new MonixTx(stream.withLatestFrom(other.stream)(f))
+  def scan0[A, B](source: Observable[A])(z: B)(op: (B, A) => B): Observable[B] =
+    source.scan(z)(op)
 
-  def scan[B](z: B)(op: (B, A) => B): MonixTx[B] = new MonixTx(stream.scan(z)(op))
+  def debounce[A](source: Observable[A])(d: FiniteDuration): Observable[A] =
+    source.debounce(d)
 
-  def scan0[B](z: B)(op: (B, A) => B): MonixTx[B] = new MonixTx(stream.scan0(z)(op))
+  def debounceMillis[A](source: Observable[A])(millis: Long): Observable[A] =
+    source.debounce(FiniteDuration(millis, "millis"))
 
-  def debounce(d: FiniteDuration): MonixTx[A] = new MonixTx(stream.debounce(d))
+  def async[A](source: Observable[A]): Observable[A] =
+    source.asyncBoundary(OverflowStrategy.Default)
 
-  def debounceMillis(millis: Long): MonixTx[A] = new MonixTx(stream.debounce(FiniteDuration.apply(millis, "millis")))
+  def delay[A](source: Observable[A])(duration: FiniteDuration): Observable[A] =
+    source.delayExecution(duration)
 
-  def async: MonixTx[A] = new MonixTx(stream.asyncBoundary(OverflowStrategy.Unbounded))
+  def delayMillis[A](source: Observable[A])(millis: Long): Observable[A] =
+    source.delayExecution(FiniteDuration(millis, "millis"))
 
-  def delay(duration: FiniteDuration): MonixTx[A] = new MonixTx(stream.delayExecution(duration))
+  def concatMapFuture[A, B](source: Observable[A])(f: A => Future[B]): Observable[B] =
+    source.concatMap(next => Observable.fromFuture(f(next)))
 
-  def delayMillis(millis: Long): MonixTx[A] = new MonixTx(stream.delayExecution(FiniteDuration.apply(millis, "millis")))
+  def concatMapAsync[A, FF[_] : Effect, B](source: Observable[A])(f: A => FF[B]): Observable[B] =
+    source.concatMap(next => Observable.from(f(next)))
 
-  def concatMapFuture[B](f: A => Future[B]): MonixTx[B] = ??? // new MonixTx(stream.concatMap(Observable.fromFuture(() => f())))
+  def redirect[A, B](source: Observable[A])(transform: Observer[B] => Observer[A]): Observable[B] =
+  Observable.create[B](OverflowStrategy.Unbounded) { subscriber =>
+    source.subscribe(transform(subscriber))
+  }
 
-  def concatMapAsync[FF[_] : Effect, B](f: A => FF[B]): MonixTx[B] = ??? // new MonixTx(stream.concatMap(Observable.fromFuture(() => f())))
-}
-
-class MonixTxBuilder extends TxBuilder {
-  type H[+T] = Observable[T]
-  type J[+T] = MonixTx[T]
-
-  def empty[A]: MonixTx[A] = new MonixTx(Observable.empty)
-
-  def withLatest[A, B](a: MonixTx[A], b: MonixTx[B]): MonixTx[(A, B)] =
-    new MonixTx(a.stream.withLatestFrom(b.stream)(Tuple2.apply))
-
-  def withLatestMap[A, B, C](a: MonixTx[A], b: MonixTx[B])(f: (A, B) => C): MonixTx[C] =
-    new MonixTx(a.stream.withLatestFrom(b.stream)(f))
+  def subscribe[A](source: Observable[A])(subscriber: Observer[A]): Cancelable =
+    source.subscribe(subscriber)
 }

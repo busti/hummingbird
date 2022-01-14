@@ -1,6 +1,7 @@
 package hummingbird.interop.zio.syntax
 
 import cats.effect.Effect
+import hummingbird.interop.zio.ZioContext
 import hummingbird.syntax.Tx
 import zio._
 import zio.stream._
@@ -8,46 +9,50 @@ import zio.stream._
 import scala.concurrent.Future
 import scala.concurrent.duration.FiniteDuration
 
-class ZioTx[+A](val stream: UStream[A]) extends Tx[A] {
-  type F[+T] = Task[T]
-  type H[+T] = UStream[T]
-  type I[-T] = ZioRx[T]
-  type J[+T] = ZioTx[T]
+class ZioTx[R, E] extends Tx with ZioContext[R with Clock, E] {
+  def map[A, B](source: H[A])(f: A => B): H[B] =
+    source.map(f)
 
-  override def subscribe(subscriber: ZioRx[_ <: A]) =
-    stream.run(subscriber.stream)
+  def flatMap[A, B](source: H[A])(f: A => H[B]): H[B] =
+    source.flatMap(f)
 
-  override def map[B](f: A => B): ZioTx[B] = ???
+  def evalMap[A, B](source: H[A])(f: A => F[B]): H[B] =
+    source.mapZIO(f)
 
-  override def flatMap[B](f: A => ZioTx[B]): ZioTx[B] = ???
+  def collect[A, B](source: H[A])(pf: PartialFunction[A, B]): H[B] =
+    source.collect(pf)
 
-  override def evalMap[B](f: A => Task[B]): ZioTx[B] = ???
+  def filter[A](source: H[A])(p: A => Boolean): H[A] =
+    source.filter(p)
 
-  override def collect[B](pf: PartialFunction[A, B]): ZioTx[B] = ???
+  def withLatest[A, B](source: H[A])(other: H[B]): H[(A, B)] =
+    source.zip(other)
 
-  override def filter(p: A => Boolean): ZioTx[A] = ???
+  def withLatestMap[A, B, C](source: H[A])(other: H[B])(f: (A, B) => C): H[C] =
+    source.zipWith(other)(f)
 
-  override def withLatest[B](other: ZioTx[B]): ZioTx[(A, B)] = ???
+  def scan[A, B](source: H[A])(z: B)(op: (B, A) => B): H[B] =
+    source.scan(z)(op)
 
-  override def withLatestMap[B, C](other: ZioTx[B])(f: (A, B) => C): ZioTx[C] = ???
+  def scan0[A, B](source: H[A])(z: B)(op: (B, A) => B): H[B] = ???
 
-  override def scan[B](z: B)(op: (B, A) => B): ZioTx[B] = ???
+  def debounce[A](source: H[A])(d: FiniteDuration): H[A] =
+    source.debounce(Duration.fromScala(d))
 
-  override def scan0[B](z: B)(op: (B, A) => B): ZioTx[B] = ???
+  def debounceMillis[A](source: H[A])(millis: Long): H[A] =
+    source.debounce(Duration.fromMillis(millis))
 
-  override def debounce(d: FiniteDuration): ZioTx[A] = ???
+  def async[A](source: H[A]): H[A] = ???
 
-  override def debounceMillis(millis: Long): ZioTx[A] = ???
+  def delay[A](source: H[A])(duration: FiniteDuration): H[A] = ???
 
-  override def async: ZioTx[A] = ???
+  def delayMillis[A](source: H[A])(millis: Long): H[A] = ???
 
-  override def delay(duration: FiniteDuration): ZioTx[A] = ???
+  def concatMapFuture[A, B](source: H[A])(f: A => Future[B]): H[B] = ???
 
-  override def delayMillis(millis: Long): ZioTx[A] = ???
+  def concatMapAsync[A, FF[_] : Effect, B](source: H[A])(f: A => FF[B]): H[B] = ???
 
-  override def concatMapFuture[B](f: A => Future[B]): ZioTx[B] = ???
+  def redirect[A, B](source: ZStream[R with Clock, E, A])(transform: ZSink[R with Clock, E, B, Unit, Unit] => ZSink[R with Clock, E, A, Unit, Unit]): ZStream[R with Clock, E, B] = ???
 
-  override def concatMapAsync[FF[_] : Effect, B](f: A => FF[B]): ZioTx[B] = ???
-
-  override def redirect[B](transform: ZioRx[_ >: B] => ZioRx[A]): ZioTx[B] = ???
+  def subscribe[A](source: ZStream[R with Clock, E, A])(subscriber: ZSink[R with Clock, E, A, Unit, Unit]): Unit => UIO[Unit] = ???
 }
